@@ -1,0 +1,10 @@
+[Unit]
+Description=Quelab RFID Reader
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=/home/doorctrl/quelab-rfid-controller/scripts/rfidreader
+
+[Install]
+WantedBy=multi-user.target

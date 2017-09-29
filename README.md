@@ -13,5 +13,6 @@ docker build -t rfid-controller .
 virtualenv -p python3 venv
 source venv/bin/activate
 pip3 install -r requirements.txt
-python3 controller.py
+pip3 install .
+WA_API_KEY=$(cat rfidreader.txt) rfidreader /dev/ttyUSB0
 ```

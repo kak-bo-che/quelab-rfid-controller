@@ -3,26 +3,25 @@ import serial
 import codecs
 import json
 import logging
-import os
 from queue import Queue, Empty
-from wildapricot import WildApricotApi
+from quelabrfid.wildapricot import WildApricotApi
 from simple_hdlc import HDLC
 
 class SerialControl():
-    def __init__(self, serial_path, api_key=None):
+    def __init__(self, serial_path, api_key=None, log_level=logging.INFO):
         self.serial_port = serial.Serial(serial_path)
         self.serial_connection = HDLC(self.serial_port, little_endian=True)
         self.last_rfid_time = time.monotonic()
         self.queue = Queue()
         self.serial_connection.queue = self.queue
-        self.configure_logging()
+        self.configure_logging(log_level)
 
         if api_key:
             self.wa_api = WildApricotApi(api_key)
 
-    def configure_logging(self):
+    def configure_logging(self, level):
         self.logger = logging.getLogger()
-        self.logger.setLevel(logging.INFO)
+        self.logger.setLevel(level)
         handler = logging.StreamHandler()
         formatter = logging.Formatter('%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s')
         handler.setFormatter(formatter)
@@ -92,9 +91,9 @@ class SerialControl():
         else:
             status = status + "Latch: unlocked, "
         if message['lock_open'] ==True:
-            status = status + "Unlock signaled"
+            status = status + "(Unlock signaled)"
         else:
-            status = status + "Lock signaled"
+            status = status + "(Lock signaled)"
 
         self.logger.info("Status: {}".format(status))
 
@@ -103,6 +102,3 @@ class SerialControl():
         self.serial_connection.sendFrame( codecs.encode(json.dumps(command)))
         self.logger.info("Opening door for: {}".format(user_name))
         self.logger.debug("Sending: {}".format(json.dumps(command)))
-
-controller = SerialControl('/dev/ttyUSB0', os.environ['WA_API_KEY'])
-controller.run()
