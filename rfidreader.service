@@ -1,10 +1,14 @@
 [Unit]
 Description=Quelab RFID Reader
+BindsTo=dev-rfidreader.device
+After=dev-rfidreader.device
+Before=multi-user.target
 After=multi-user.target
 
 [Service]
 Type=idle
-ExecStart=/home/doorctrl/quelab-rfid-controller/scripts/rfidreader
+EnvironmentFile=/home/doorctrl/quelab-rfid-controller/rfidreader.env
+ExecStart=/usr/local/bin/rfidreader /dev/rfidreader
 
 [Install]
 WantedBy=multi-user.target

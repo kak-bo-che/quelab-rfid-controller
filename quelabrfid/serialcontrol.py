@@ -15,6 +15,7 @@ class SerialControl():
         self.queue = Queue()
         self.serial_connection.queue = self.queue
         self.configure_logging(log_level)
+        self.last_status = {}
 
         if api_key:
             self.wa_api = WildApricotApi(api_key)
@@ -71,11 +72,25 @@ class SerialControl():
         else:
             self.queue.put(message)
 
+    def _is_active_member(self, contact):
+        for field in contact['FieldValues']:
+             if field['FieldName'] == 'Membership status':
+                 status = field['Value'].get('Value')
+        if status in ['Lapsed', 'Active']:
+            return True
+        else:
+            return False
+
     def process_message(self, message):
         if message['message'] == 'rfid_card':
-            contact = self.wa_api.find_contact_by_rfid(message['rfid'])
-            if contact['Status'] == 'Active':
-                self.unlock_door(contact['DisplayName'])
+            try:
+                contact = self.wa_api.find_contact_by_rfid(message['rfid'])
+                if self._is_active_member(contact):
+                    self.unlock_door(contact['DisplayName'])
+                else:
+                    self.access_denied(contact['DisplayName'])
+            except IndexError:
+                self.logger.warn("Attempted entry with unknown RFID: {}".format(message['rfid']))
         elif message['message'] == 'status':
             self.status_received(message)
 
@@ -95,7 +110,14 @@ class SerialControl():
         else:
             status = status + "(Lock signaled)"
 
-        self.logger.info("Status: {}".format(status))
+        if self.last_status == message:
+            self.logger.debug("Status: {}".format(status))
+        else:
+            self.logger.info("Status: {}".format(status))
+        self.last_status = message
+
+    def access_denied(self, user_name):
+        self.logger.info("Access denied to: {}".format(user_name))
 
     def unlock_door(self, user_name):
         command = {"message": "lock_ctrl", "unlock": True}

@@ -18,13 +18,11 @@ class WildApricotApi(object):
 
     def find_contact_by_rfid(self, rfid):
         contact = None
-        try:
-            contactsUrl = next(res for res in self.account['Resources'] if res['Name'] == 'Contacts')['Url']
-            params = {'$async': 'false', '$filter': "RFID eq " + str(rfid), '$select': 'Membership status'}
-            request_url = contactsUrl +  '?' + urllib.parse.urlencode(params)
-            response = self.api.execute_request(request_url)
-            if response:
-                contact = response['Contacts'][0]
-        except IndexError:
-            pass # IndexError: Contact does not exist
+        contactsUrl = next(res for res in self.account['Resources'] if res['Name'] == 'Contacts')['Url']
+        params = {'$async': 'false', '$filter': "RFID eq " + str(rfid)}
+
+        request_url = contactsUrl +  '?' + urllib.parse.urlencode(params)
+        response = self.api.execute_request(request_url)
+        if response:
+            contact = response['Contacts'][0]
         return contact
