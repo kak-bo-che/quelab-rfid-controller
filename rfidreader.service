@@ -7,6 +7,8 @@ After=multi-user.target
 
 [Service]
 Type=idle
+User=doorctrl
+Group=doorctrl
 EnvironmentFile=/home/doorctrl/quelab-rfid-controller/rfidreader.env
 ExecStart=/usr/local/bin/rfidreader /dev/rfidreader --cached /home/doorctrl/cached_logins.pickle
 

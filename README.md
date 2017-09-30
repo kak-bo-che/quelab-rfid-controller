@@ -88,6 +88,8 @@ WA_API_KEY=[your API key from WildApricot HERE]
 ### Enable the systemd unit file
 ```bash
 sudo cp rfidreader.service /lib/systemd/system/
+# if the unit file has been modified it needs to be reloaded
+sudo systemctl daemon-reload
 sudo systemctl enable rfidreader.service
 # add doorctrl to the journal group so it can view logs
 usermod -a -G systemd-journal doorctrl
