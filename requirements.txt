@@ -1,3 +1,4 @@
 pyserial
+paho-mqtt
 git+https://github.com/kak-bo-che/simple-hdlc#egg=simple-hdlc
 git+https://github.com/kak-bo-che/wildapricotapi#egg=wildapricotapi

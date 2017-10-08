@@ -1,11 +1,11 @@
-from datetime import datetime
 import time
 import codecs
 import json
 import logging
-import pickle
 
 import serial
+from .cached_logins import CachedLogins
+import paho.mqtt.publish as publish
 from queue import Queue, Empty
 from quelabrfid.wildapricot import WildApricotApi
 from simple_hdlc import HDLC
@@ -19,9 +19,9 @@ class SerialControl():
         self.serial_connection.queue = self.queue
         self.configure_logging(log_level)
         self.last_status = {}
-        self.login_path = cached_logins
-        self.cached_logins = self._load_cached_login_file()
-
+        self.cached_logins = CachedLogins(cached_logins)
+        self.mqtt_topic = 'test'
+        self.mqtt_host = 'localhost'
         if api_key:
             self.wa_api = WildApricotApi(api_key)
 
@@ -79,33 +79,6 @@ class SerialControl():
         else:
             self.queue.put(message)
 
-    def _load_cached_login_file(self):
-        logins = []
-        try:
-            with open(self.login_path, 'rb') as login_file:
-                logins = pickle.load(login_file)
-
-        except (TypeError, EOFError, FileNotFoundError):
-            # None is not a valid path
-            pass
-        return logins
-
-    def _dump_cached_login_file(self):
-        with open(self.login_path, 'wb') as logins:
-            pickle.dump(self.cached_logins, logins)
-
-    def _check_cached_logins(self, rfid):
-        return next((login[1] for login in self.cached_logins if login[0] == rfid), None)
-
-    def _update_cached_logins(self, rfid, user_name):
-        # remove if rfid already accepted
-        self.cached_logins = list(filter(lambda x: x[0] != rfid, self.cached_logins))
-        self.cached_logins.insert(0, (rfid, user_name, datetime.now()))
-
-        self.cached_logins = self.cached_logins[0:10] # limit to last 10 entries
-        self._dump_cached_login_file()
-        self.logger.info(self.cached_logins)
-
     def process_message(self, message):
         # Asyncronous Message Processor
         if message['message'] == 'rfid_card':
@@ -142,9 +115,12 @@ class SerialControl():
     def rfid_received(self, message):
         try:
             contact = self.wa_api.find_contact_by_rfid(message['rfid'])
-            if self._is_active_member(contact):
+            if WildApricotApi.is_active_member(contact):
                 self.unlock_door(contact['DisplayName'])
-                self._update_cached_logins(message['rfid'], contact['DisplayName'])
+                avatar = self.wa_api.get_contact_avatar(contact)
+                contact['avatar'] = avatar
+                self.cached_logins.update_cached_logins(message['rfid'], contact)
+                publish.single(self.mqtt_topic, json.dumps(contact), hostname=self.mqtt_host)
             else:
                 self.access_denied(contact['DisplayName'])
 
@@ -152,20 +128,11 @@ class SerialControl():
             self.logger.warn("(Network Connected) Unknown RFID: {}".format(message['rfid']))
 
         except TypeError:
-            cached_login = self._check_cached_logins(message['rfid'])
+            cached_login = self.cached_logins.check_cached_logins(message['rfid'])
             if cached_login:
-                self.unlock_door(cached_login)
+                self.unlock_door(cached_login['DisplayName'])
             else:
                 self.logger.warn("(Network Disconnected) Unknown RFID: {}".format(message['rfid']))
-
-    def _is_active_member(self, contact):
-        for field in contact['FieldValues']:
-            if field['FieldName'] == 'Membership status':
-                status = field['Value'].get('Value')
-        if status in ['Lapsed', 'Active']:
-            return True
-        else:
-            return False
 
     def access_denied(self, user_name):
         self.logger.info("Access denied to: {}".format(user_name))

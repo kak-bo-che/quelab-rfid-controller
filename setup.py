@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='quelabrfid',
-      version='1.0',
+      version='1.1.0',
       description='A Control Program for the Quelab RFID Door Controller',
       author='Troy Ross',
       author_email='kak.bo.che@gmail.com',
