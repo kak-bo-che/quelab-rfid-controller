@@ -21,29 +21,42 @@ class WildApricotApi(object):
         except URLError:
             self.connected = False
 
-    def find_contact_by_rfid(self, rfid):
+    def find_contact_by_filter(self, filter):
+        """
+        example filters:
+        "FirstName eq " + str(first_name) + ' AND LastName eq ' + str(last_name)
+        "RFID eq " + str(rfid)
+        """
         self.authenticate()
         contact = None
         if self.account:
-            contactsUrl = next(res for res in self.account['Resources'] if res['Name'] == 'Contacts')['Url']
-            params = {'$async': 'false', '$filter': "RFID eq " + str(rfid)}
+            contacts_url = next(res for res in self.account['Resources'] if res['Name'] == 'Contacts')['Url']
+            params = {'$async': 'false', '$filter': filter}
 
-            request_url = contactsUrl +  '?' + urllib.parse.urlencode(params)
+            request_url = contacts_url +  '?' + urllib.parse.urlencode(params)
             try:
                 response = self.api.execute_request(request_url)
-                if response:
+                if response and response.get('Contacts'):
                     contact = response['Contacts'][0]
                 self.connected = True
             except URLError:
                 self.connected = False
         return contact
 
+    def find_contact_by_name(self, first_name, last_name):
+        filter = "FirstName eq " + str(first_name) + ' AND LastName eq ' + str(last_name)
+        return self.find_contact_by_filter(filter)
+
+    def find_contact_by_rfid(self, rfid):
+        filter = "RFID eq " + str(rfid)
+        return self.find_contact_by_filter(filter)
+
     def get_contact_avatar(self, contact):
         url = None
         avatar = None
         file_name = ""
         for field in contact['FieldValues']:
-            if field['FieldName'] == 'Avatar':
+            if field['FieldName'] == 'Avatar' and field['Value']:
                 url = field['Value'].get('Url')
                 file_name = field['Value'].get('Id')
                 break

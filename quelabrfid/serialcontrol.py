@@ -2,6 +2,7 @@ import time
 import codecs
 import json
 import logging
+from datetime import datetime, timezone
 
 import serial
 from .cached_logins import CachedLogins
@@ -20,8 +21,8 @@ class SerialControl():
         self.configure_logging(log_level)
         self.last_status = {}
         self.cached_logins = CachedLogins(cached_logins)
-        self.mqtt_topic = 'test'
-        self.mqtt_host = 'localhost'
+        self.mqtt_topic = 'quelab/door/entry'
+        self.mqtt_host = 'mosquitto'
         if api_key:
             self.wa_api = WildApricotApi(api_key)
 
@@ -54,7 +55,7 @@ class SerialControl():
         # the serial port
         self.start()
         while True:
-            time.sleep(0.001)
+            time.sleep(0.1)
             if not self.serial_connection.reader.isAlive():
                 self.stop()
             try:
@@ -112,15 +113,21 @@ class SerialControl():
             self.logger.info("{} Status: {}".format(connected, status))
         self.last_status = message
 
+    def handle_member_signin(self, contact, rfid):
+            self.unlock_door(contact['DisplayName'])
+            avatar = self.wa_api.get_contact_avatar(contact)
+            contact['avatar'] = avatar
+            contact['signin_time'] = datetime.now(tz=timezone.utc).isoformat()
+            contact['source'] = 'rfid'
+            self.cached_logins.update_cached_logins(rfid, contact)
+            publish.single(self.mqtt_topic, json.dumps(contact), hostname=self.mqtt_host)
+
+
     def rfid_received(self, message):
         try:
             contact = self.wa_api.find_contact_by_rfid(message['rfid'])
             if WildApricotApi.is_active_member(contact):
-                self.unlock_door(contact['DisplayName'])
-                avatar = self.wa_api.get_contact_avatar(contact)
-                contact['avatar'] = avatar
-                self.cached_logins.update_cached_logins(message['rfid'], contact)
-                publish.single(self.mqtt_topic, json.dumps(contact), hostname=self.mqtt_host)
+                self.handle_member_signin(contact, message['rfid'])
             else:
                 self.access_denied(contact['DisplayName'])
 

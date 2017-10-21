@@ -35,7 +35,6 @@ sudo udevadm control --reload
 # monitor device insertion
 udevadm monitor --environment
 ```
-
 ## Systemd
 Systemd will allow us to create a unit file that is run whenever the
 rfidreader device appears to the system. By default for some reason Journald
