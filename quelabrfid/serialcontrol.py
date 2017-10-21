@@ -21,7 +21,8 @@ class SerialControl():
         self.configure_logging(log_level)
         self.last_status = {}
         self.cached_logins = CachedLogins(cached_logins)
-        self.mqtt_topic = 'quelab/door/entry'
+        self.mqtt_topic =  'quelab/door/entry'
+        self.mqtt_status = 'quelab/door/status'
         self.mqtt_host = mqtt_host
         if api_key:
             self.wa_api = WildApricotApi(api_key)
@@ -47,6 +48,12 @@ class SerialControl():
         self.logger.error("Stopping Serial Reader")
         self.serial_connection.stopReader()
         self.serial_port.close()
+        self.last_status['connected'] = self.wa_api.connected
+        self.last_status['timestamp'] = datetime.now(tz=timezone.utc).isoformat()
+        self.last_status['arduino_connected'] = False
+
+        publish.single(self.mqtt_status, json.dumps(self.last_status),
+                        hostname=self.mqtt_host, retain=True)
         exit(1)
 
 
@@ -90,10 +97,12 @@ class SerialControl():
     def status_received(self, message):
         # {"message":"status","door_open":false,"locked":true,"lock_open":false}
         status = "Door: "
+
         if self.wa_api.connected:
             connected = "(Network Connected)"
         else:
             connected = "(Network Disconnected)"
+
         if message['door_open'] == True:
             status = status + "open, "
         else:
@@ -112,6 +121,14 @@ class SerialControl():
         else:
             self.logger.info("{} Status: {}".format(connected, status))
         self.last_status = message
+
+        message['connected'] = self.wa_api.connected
+        message['timestamp'] = datetime.now(tz=timezone.utc).isoformat()
+        message['arduino_connected'] = True
+
+        publish.single(self.mqtt_status, json.dumps(message),
+                        hostname=self.mqtt_host, retain=True)
+
 
     def handle_member_signin(self, contact, rfid):
             self.unlock_door(contact['DisplayName'])
