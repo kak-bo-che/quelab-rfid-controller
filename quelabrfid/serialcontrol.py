@@ -2,6 +2,7 @@ import time
 import codecs
 import json
 import logging
+import signal
 from datetime import datetime, timezone
 
 import serial
@@ -24,6 +25,7 @@ class SerialControl():
         self.mqtt_topic =  'quelab/door/entry'
         self.mqtt_status = 'quelab/door/status'
         self.mqtt_host = mqtt_host
+        signal.signal(signal.SIGTERM, self.stop)
         if api_key:
             self.wa_api = WildApricotApi(api_key)
 
