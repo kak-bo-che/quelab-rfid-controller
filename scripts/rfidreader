@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(description='Communicate with RFID Reader and W
 parser.add_argument('device', default='/dev/ttyUSB0', help='The USB Serial Port of the Arduino')
 parser.add_argument('-k', '--apikey', help='The USB Serial Port of the Arduino')
 parser.add_argument('-c', '--cached', help='Cached Logins path, used when no network')
+parser.add_argument('-m', '--mqtt_host', help='MQTT host to publish to')
 parser.add_argument('-v', '--verbose',  action='store_true', help='verbose logging')
 args = parser.parse_args()
 
@@ -24,5 +25,5 @@ if args.verbose:
 else:
     level = logging.INFO
 
-controller = SerialControl(args.device, key, cached_logins=args.cached, log_level=level)
+controller = SerialControl(args.device, key, cached_logins=args.cached, mqtt_host=args.mqtt_host, log_level=level)
 controller.run()

@@ -12,7 +12,7 @@ from quelabrfid.wildapricot import WildApricotApi
 from simple_hdlc import HDLC
 
 class SerialControl():
-    def __init__(self, serial_path, api_key=None, cached_logins=None, log_level=logging.INFO):
+    def __init__(self, serial_path, api_key=None, cached_logins=None, mqtt_host='localhost', log_level=logging.INFO):
         self.serial_port = serial.Serial(serial_path)
         self.serial_connection = HDLC(self.serial_port, little_endian=True)
         self.last_rfid_time = time.monotonic()
@@ -22,7 +22,7 @@ class SerialControl():
         self.last_status = {}
         self.cached_logins = CachedLogins(cached_logins)
         self.mqtt_topic = 'quelab/door/entry'
-        self.mqtt_host = 'mosquitto'
+        self.mqtt_host = mqtt_host
         if api_key:
             self.wa_api = WildApricotApi(api_key)
 
