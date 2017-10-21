@@ -43,7 +43,7 @@ class SerialControl():
         self.logger.info("Starting Serial Reader")
         self.serial_connection.startReader(onFrame=self.frame_callback, onError=self.error_callback)
 
-    def stop(self):
+    def stop(self, signum=None, frame=None):
         # on loss of serial port exit immediately, have systemd/supervisord
         # restart the process on failure, otherwise the serial port will
         # continue to be reserved
