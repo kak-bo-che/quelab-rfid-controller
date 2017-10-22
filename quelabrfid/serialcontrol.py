@@ -9,7 +9,7 @@ import serial
 from .cached_logins import CachedLogins
 import paho.mqtt.publish as publish
 from queue import Queue, Empty
-from quelabrfid.wildapricot import WildApricotApi
+from quelabrfid.wildapricot import WildApricotApi, UnknownUserError
 from simple_hdlc import HDLC
 
 class SerialControl():
@@ -145,15 +145,16 @@ class SerialControl():
     def rfid_received(self, message):
         try:
             contact = self.wa_api.find_contact_by_rfid(message['rfid'])
-            if WildApricotApi.is_active_member(contact):
-                self.handle_member_signin(contact, message['rfid'])
-            else:
-                self.access_denied(contact['DisplayName'])
+            if contact:
+                if WildApricotApi.is_active_member(contact):
+                    self.handle_member_signin(contact, message['rfid'])
+                else:
+                    self.access_denied(contact['DisplayName'])
 
-        except IndexError:
+        except UnknownUserError:
             self.logger.warn("(Network Connected) Unknown RFID: {}".format(message['rfid']))
 
-        except TypeError:
+        except TypeError as e:
             cached_login = self.cached_logins.check_cached_logins(message['rfid'])
             if cached_login:
                 self.unlock_door(cached_login['DisplayName'])

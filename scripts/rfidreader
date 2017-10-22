@@ -25,5 +25,6 @@ if args.verbose:
 else:
     level = logging.INFO
 
-controller = SerialControl(args.device, key, cached_logins=args.cached, mqtt_host=args.mqtt_host, log_level=level)
+controller = SerialControl(args.device, key, cached_logins=args.cached, \
+                           mqtt_host=args.mqtt_host, log_level=level)
 controller.run()

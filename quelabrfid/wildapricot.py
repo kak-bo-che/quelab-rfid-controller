@@ -4,6 +4,8 @@ import urllib.parse
 from urllib.error import URLError
 from wildapricotapi import ApiException, WaApiClient
 
+class UnknownUserError(Exception):
+    pass
 class WildApricotApi(object):
     def __init__(self, api_key):
         self.api = WaApiClient(api_key=api_key)
@@ -38,6 +40,8 @@ class WildApricotApi(object):
                 response = self.api.execute_request(request_url)
                 if response and response.get('Contacts'):
                     contact = response['Contacts'][0]
+                else:
+                    raise UnknownUserError("Unknown User")
                 self.connected = True
             except URLError:
                 self.connected = False
