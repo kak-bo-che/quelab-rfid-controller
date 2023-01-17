@@ -77,7 +77,7 @@ class WildApricotApi(object):
         for field in contact['FieldValues']:
             if field['FieldName'] == 'Membership status':
                 status = field['Value'].get('Value')
-        if status in ['Lapsed', 'Active']:
+        if status in ['Active']:
             return True
         else:
             return False
