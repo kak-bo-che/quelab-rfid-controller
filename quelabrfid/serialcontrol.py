@@ -6,7 +6,7 @@ import signal
 from datetime import datetime, timezone
 
 import serial
-from .cached_logins import CachedLogins
+from quelabrfid.cached_logins import CachedLogins, CachedLoginsBase
 import paho.mqtt.publish as publish
 from queue import Queue, Empty
 from quelabrfid.wildapricot import WildApricotApi, UnknownUserError
@@ -14,14 +14,19 @@ from simple_hdlc import HDLC
 
 class SerialControl():
     def __init__(self, serial_path, api_key=None, cached_logins=None, mqtt_host='localhost', log_level=logging.INFO):
-        self.serial_port = serial.Serial(serial_path)
+        self.serial_port = serial.serial_for_url(serial_path)
         self.serial_connection = HDLC(self.serial_port, little_endian=True)
         self.last_rfid_time = time.monotonic()
         self.queue = Queue()
         self.serial_connection.queue = self.queue
         self.configure_logging(log_level)
         self.last_status = {}
-        self.cached_logins = CachedLogins(cached_logins)
+        try:
+            self.cached_logins = CachedLogins(cached_logins)
+        except ValueError:
+            self.logger.warn("Cached logins are not enabled")
+            self.cached_logins = CachedLoginsBase()
+
         self.mqtt_topic =  'quelab/door/entry'
         self.mqtt_status = 'quelab/door/status'
         self.mqtt_host = mqtt_host
@@ -65,8 +70,12 @@ class SerialControl():
         self.start()
         while True:
             time.sleep(0.1)
-            if not self.serial_connection.reader.isAlive():
-                self.stop()
+            try:
+                if not self.serial_connection.reader.isAlive():
+                    self.stop()
+            except AttributeError:
+                if not self.serial_connection.reader.is_alive():
+                    self.stop()
             try:
                 item = self.queue.get(block=False, timeout=1)
                 self.process_message(item)
@@ -138,7 +147,11 @@ class SerialControl():
             contact['avatar'] = avatar
             contact['signin_time'] = datetime.now(tz=timezone.utc).isoformat()
             contact['source'] = 'rfid'
-            self.cached_logins.update_cached_logins(rfid, contact)
+            try:
+                self.cached_logins.update_cached_logins(rfid, contact)
+            except Exception as e:
+                self.logger.error(str(e))
+            self.logger.info("Sending mqtt member open message: {}".format(contact['DisplayName']))
             publish.single(self.mqtt_topic, json.dumps(contact), hostname=self.mqtt_host)
 
 

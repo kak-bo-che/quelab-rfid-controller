@@ -1,12 +1,43 @@
 # Python Code for Quelab RFID reader
+This is the portion of of the Quelab sign in that listens for serial messages coming from the arduino nano
+containing status information as well as rfid door open requests.
+Status message are published as JSON to a mqtt server listening on localhost
+to the 'quelab/door/status'.
+```json
+{
+ "message":"status",
+ "door_open":false,
+ "locked":true,
+ "lock_open":false,
+ "connected":true,
+ "timestamp":"2017-10-21T00:00:00",
+ "arduino_connected": true
+}
+```
+If an RFID door open request is successful the member information is  published
+to the 'quelab/door/entry' topic.
+The Member data is taken verbatim from the WildApricot2.1 api. With the addition
+of the following fields:
+```json
+{
+    "avatar": "base64 encoded image taken from WildApricot",
+    "signin_time":"2017-10-21T00:00:00",
+    "source": "rfid"
+}
+```
 
 The Arduino nano is expected to be connected to */dev/ttyUSB0* on the host machine
 
+## Installation and Setup
 ## Using Docker to run
 ```bash
 docker build -t rfid-controller .
 ./runit.sh
 ```
+The updated rfid_reader expects an mqtt server to be present. There is a docker-compose.yml
+file available in the project directory to build/run the project.
+
+Also no messages related to reading the rfid card are displayed in log messages by default this can be changed by passing the --verbose flag
 
 ## Using python virtualenv
 ```bash

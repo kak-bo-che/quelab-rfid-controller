@@ -2,11 +2,28 @@ import pickle
 import logging
 from datetime import datetime
 
-class CachedLogins(object):
+class CachedLoginsBase(object):
+    def __init__(self):
+        self.logger = logging.getLogger()
+
+    def load_cached_login_file(self):
+        return []
+    def dump_cached_login_file(self):
+        self.logger.warn("Cached login file disabled")
+        pass
+    def check_cached_logins(self, rfid):
+        return None
+    def update_cached_logins(self, rfid, contact):
+        self.logger.warn("Cached login file disabled")
+        pass
+
+class CachedLogins(CachedLoginsBase):
     """
     cached login pickle format (rfid, wild_apricot_contact, timestamp)
     """
-    def __init__(self, login_path=None):
+    def __init__(self, login_path):
+        if not login_path:
+            raise ValueError("login_path must be a vaild path")
         self.login_path = login_path
         self.cached_logins = self.load_cached_login_file()
         self.logger = logging.getLogger()
@@ -25,7 +42,7 @@ class CachedLogins(object):
     def dump_cached_login_file(self):
         with open(self.login_path, 'wb') as logins:
             pickle.dump(self.cached_logins, logins)
-        self.logger.info("Writting to cached login file {}".format(self.login_path))
+        self.logger.info("Writing to cached login file {}".format(self.login_path))
 
 
     def check_cached_logins(self, rfid):

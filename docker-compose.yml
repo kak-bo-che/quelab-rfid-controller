@@ -1,0 +1,21 @@
+version: '3'
+services:
+  rfid:
+    build: .
+    volumes:
+    - .:/source
+    links:
+    - mosquitto
+    devices:
+    - "/dev/ttyUSB0:/dev/ttyUSB0"
+    environment:
+    - WA_API_KEY=${WA_API_KEY}
+    command: scripts/rfidreader /dev/ttyUSB0 -c /tmp/login.pickle -m mosquitto
+  mosquitto:
+    image: eclipse-mosquitto
+    ports:
+    - "1883:1883"
+    - "1884:1884"
+    - "9001:9001"
+    volumes:
+    - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
